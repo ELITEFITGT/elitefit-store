@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F4F2EE" />
+    <meta name="description" content="Ropa fitness para mujer y hombre y accesorios de entrenamiento. Pedidos por WhatsApp." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap"
+      rel="stylesheet"
+    />
+    <title>ELITEFIT</title>
+    <!--
+      Pantalla de entrada: prepara el fondo oscuro antes de que cargue la app para evitar un destello claro.
+      La app decide después si la muestra (src/lib/splash.ts); si no, retira este fondo de inmediato.
+      El color debe coincidir con --splash-bg en src/index.css. Si la app no llega a cargar, se retira solo a los 5 segundos.
+    -->
+    <style>
+      html.splash-pending { overflow: hidden; }
+      html.splash-pending, html.splash-pending body { background: #0b0b0c; }
+    </style>
+    <script>
+      (function () {
+        var root = document.documentElement;
+        root.classList.add('splash-pending');
+        setTimeout(function () { root.classList.remove('splash-pending'); }, 5000);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
