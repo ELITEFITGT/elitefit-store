@@ -35,6 +35,9 @@ function chatApi(mode: string): Plugin {
 }
 
 export default defineConfig(({ mode }) => ({
+  // Ruta donde se publica la tienda. En GitHub Pages es /<nombre-del-repositorio>/ (lo define el workflow);
+  // en Vercel o un dominio propio, la raíz.
+  base: process.env.BASE_PATH || '/',
   plugins: [react(), chatApi(mode)],
   test: {
     environment: 'jsdom',

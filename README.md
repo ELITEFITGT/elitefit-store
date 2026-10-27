@@ -28,6 +28,18 @@ Sube el contenido de `dist/` a cualquier hosting estático (Netlify, Vercel, Clo
 - **Netlify:** crea `public/_redirects` con la línea `/*  /index.html  200`.
 - **Vercel:** detecta Vite y lo configura automáticamente.
 
+### GitHub Pages
+
+GitHub Pages no puede publicar el código fuente tal cual: hay que publicar la versión compilada (`dist/`). Si se publica la rama directamente, la página queda en negro, porque el navegador no puede ejecutar `src/main.tsx`. El repositorio incluye un workflow que compila y publica solo:
+
+1. En GitHub, abre el repositorio → **Settings → Pages → Build and deployment → Source** y elige **GitHub Actions**.
+2. Sube los cambios a la rama `master`. El workflow `.github/workflows/deploy-pages.yml` corre las pruebas, compila con la ruta `/<repositorio>/` y publica.
+3. Sigue el avance en la pestaña **Actions**. Al terminar, la tienda queda en `https://<usuario>.github.io/<repositorio>/`.
+
+Notas:
+- La ruta base se define con la variable `BASE_PATH` al compilar. En Vercel o con un dominio propio no hace falta.
+- GitHub Pages solo sirve archivos estáticos. La tienda y los pedidos por WhatsApp funcionan, pero el asistente con IA no; aparece como no disponible. Para el asistente, usa Vercel (ver abajo).
+
 ## Cambiar nombre, WhatsApp y textos
 
 Todo está en **`src/config/store.ts`**:
