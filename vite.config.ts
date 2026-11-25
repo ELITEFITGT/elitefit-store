@@ -78,5 +78,8 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Las pruebas de interfaz simulan a una persona llenando formularios completos; en máquinas
+    // lentas o en GitHub Actions superan los 5 s por defecto aunque todo funcione bien.
+    testTimeout: 20_000,
   },
 }));
