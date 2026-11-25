@@ -39,7 +39,7 @@ describe('detalle del producto y carrito', () => {
   it('agrega variantes, suma cantidades, abre el carrito y persiste', async () => {
     const user = userEvent.setup();
     // Tras agregar, el botón muestra "Agregado al carrito" unos segundos.
-    const addButton = () => screen.getByRole('button', { name: /^(agregar|agregado) al carrito$/i });
+    const addButton = () => screen.getByRole('button', { name: /^(agregar al carrito|agregado a la bolsa)$/i });
     const view = renderAt('/producto/leggings-sculpt-tiro-alto');
 
     await user.click(screen.getByLabelText('Oliva'));
@@ -92,8 +92,8 @@ describe('detalle del producto y carrito', () => {
   });
 });
 
-describe('pedido por WhatsApp', () => {
-  it('valida el formulario, abre wa.me con el mensaje y no vacía el carrito', async () => {
+describe('confirmar pedido', () => {
+  it('valida el formulario, envía el pedido a /api/pedidos, muestra el número y vacía el carrito', async () => {
     localStorage.setItem(
       CART_STORAGE_KEY,
       JSON.stringify([
@@ -101,46 +101,73 @@ describe('pedido por WhatsApp', () => {
         { productId: 'p16', size: null, color: 'Blanco', quantity: 1 },
       ]),
     );
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, orderNumber: 1024, total: 487 }), { status: 201 }),
+    );
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     const user = userEvent.setup();
     renderAt('/carrito');
 
-    await user.click(screen.getByRole('button', { name: /realizar pedido por whatsapp/i }));
+    await user.click(screen.getByRole('button', { name: /confirmar pedido/i }));
     const dialog = await screen.findByRole('dialog', { name: /datos para tu pedido/i });
 
-    // Sin nombre ni dirección (envío por defecto) no abre WhatsApp.
-    await user.click(within(dialog).getByRole('button', { name: /abrir whatsapp/i }));
+    // Sin datos (envío por defecto) no se envía.
+    await user.click(within(dialog).getByRole('button', { name: /confirmar pedido/i }));
     expect(within(dialog).getByText(/escribe tu nombre/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/teléfono válido/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/elige el departamento/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/escribe la dirección/i)).toBeInTheDocument();
-    expect(open).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
 
-    // Al elegir "Recoger" la dirección deja de ser obligatoria.
     await user.type(within(dialog).getByLabelText(/nombre/i), 'Carlos Pérez');
-    await user.click(within(dialog).getByLabelText(/recoger/i));
-    expect(within(dialog).queryByLabelText(/dirección de entrega/i)).not.toBeInTheDocument();
-    await user.type(within(dialog).getByLabelText(/observaciones/i), 'Paso el sábado');
-    await user.click(within(dialog).getByRole('button', { name: /abrir whatsapp/i }));
+    await user.type(within(dialog).getByLabelText(/teléfono/i), '5555 1234');
+    await user.selectOptions(within(dialog).getByLabelText(/departamento/i), 'Guatemala');
+    await user.type(within(dialog).getByLabelText(/municipio/i), 'Mixco');
+    await user.type(within(dialog).getByLabelText(/^dirección/i), '5a avenida 10-20, zona 1');
+    await user.click(within(dialog).getByRole('button', { name: /confirmar pedido/i }));
 
-    expect(open).toHaveBeenCalledTimes(1);
-    const url = new URL(open.mock.calls[0][0] as string);
-    expect(url.origin + url.pathname).toBe('https://wa.me/50242709260');
-    const text = url.searchParams.get('text')!;
-    expect(text).toContain('*Cliente:* Carlos Pérez');
-    expect(text).toContain('1. Camiseta Dry Training');
-    expect(text).toContain('Talla: L | Color: Blanco');
-    expect(text).toContain(`Cantidad: 2 x ${formatPrice(179)} = ${formatPrice(358)}`);
-    expect(text).toContain('Talla única | Color: Blanco');
-    expect(text).toContain(`*Total de productos:* ${formatPrice(358 + 129)}`);
-    expect(text).toContain('*Envío:* por confirmar');
-    expect(text).toContain('*Entrega:* Recoger');
-    expect(text).not.toContain('Dirección');
-    expect(text).toContain('*Observaciones:* Paso el sábado');
-
-    // No se muestra como confirmado y el carrito se conserva.
-    expect(await screen.findByText(/tu pedido aún no está confirmado/i)).toBeInTheDocument();
-    expect(screen.queryByText(/pedido enviado/i)).not.toBeInTheDocument();
-    expect(storedCart()).toHaveLength(2);
+    expect(await screen.findByText('#1024')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/pedidos');
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.customer).toMatchObject({
+      name: 'Carlos Pérez',
+      phone: '5555 1234',
+      delivery: 'envio',
+      department: 'Guatemala',
+      municipality: 'Mixco',
+      address: '5a avenida 10-20, zona 1',
+    });
+    expect(body.lines).toEqual([
+      { productId: 'p07', size: 'L', color: 'Blanco', quantity: 2 },
+      { productId: 'p16', size: null, color: 'Blanco', quantity: 1 },
+    ]);
+    // No se usa WhatsApp y el carrito queda vacío.
+    expect(open).not.toHaveBeenCalled();
+    expect(storedCart()).toEqual([]);
+    fetchMock.mockRestore();
     open.mockRestore();
+  });
+
+  it('muestra el error del servidor y conserva el carrito', async () => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify([{ productId: 'p16', size: null, color: 'Blanco', quantity: 1 }]));
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ ok: false, error: 'save_failed', message: 'No pudimos registrar tu pedido.' }), { status: 502 }));
+    const user = userEvent.setup();
+    renderAt('/carrito');
+
+    await user.click(screen.getByRole('button', { name: /confirmar pedido/i }));
+    const dialog = await screen.findByRole('dialog', { name: /datos para tu pedido/i });
+    await user.type(within(dialog).getByLabelText(/nombre/i), 'Ana');
+    await user.type(within(dialog).getByLabelText(/teléfono/i), '55551234');
+    await user.click(within(dialog).getByLabelText(/recoger/i));
+    await user.click(within(dialog).getByRole('button', { name: /confirmar pedido/i }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('No pudimos registrar tu pedido.');
+    expect(storedCart()).toHaveLength(1);
+    fetchMock.mockRestore();
   });
 });
 

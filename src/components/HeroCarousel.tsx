@@ -22,7 +22,8 @@ const isKeyboardFocus = (el: Element) => {
 };
 
 /**
- * Portada a pantalla completa, solo con fotos, que avanza por pasos.
+ * Portada a pantalla completa que avanza por pasos. Las fotos llevan el filtro de color de la marca
+ * (verde azulado con un resplandor rosa) y un título grande por paso.
  * Sigue avanzando aunque el cursor esté encima. Se pausa al navegar con teclado dentro (no con clics o toques),
  * con el botón de pausa, cuando la pestaña no está visible y, por defecto,
  * si el sistema pide reducir el movimiento.
@@ -143,7 +144,7 @@ export function HeroCarousel() {
                   decoding={i === 0 ? 'sync' : 'async'}
                   {...(i === 0 ? { fetchpriority: 'high' } : {})}
                   style={position}
-                  className={`absolute inset-0 h-full w-full bg-transparent object-cover [object-position:var(--pos-m)] md:[object-position:var(--pos-d)] transition-transform duration-[6000ms] ease-out ${
+                  className={`absolute inset-0 h-full w-full bg-transparent object-cover saturate-[.8] contrast-[1.08] [object-position:var(--pos-m)] md:[object-position:var(--pos-d)] transition-transform duration-[6000ms] ease-out ${
                     active ? 'scale-100' : 'motion-safe:scale-105'
                   }`}
                 />
@@ -152,15 +153,34 @@ export function HeroCarousel() {
         })}
       </div>
 
-      {/* Degradados suaves: arriba para leer el encabezado transparente y abajo para los controles. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-44 bg-gradient-to-b from-black/55 to-transparent" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-56 bg-gradient-to-t from-black/65 to-transparent" aria-hidden="true" />
+      {/* Filtro de color de la marca sobre todas las fotos:
+          1) tiñe la foto de verde azulado, 2) resplandor rosa arriba a la derecha,
+          3) sombra verde oscura abajo a la izquierda para leer el título,
+          4) degradado arriba para leer el encabezado transparente. */}
+      <div className="pointer-events-none absolute inset-0 z-10 bg-ink opacity-45 mix-blend-color" aria-hidden="true" />
+      <div
+        className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_80%_22%,rgb(var(--color-accent)/0.42),transparent_42%)] mix-blend-screen"
+        aria-hidden="true"
+      />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-tr from-night/90 via-night/35 to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-2/3 bg-gradient-to-t from-night/80 to-transparent" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-44 bg-gradient-to-b from-night/70 to-transparent" aria-hidden="true" />
 
       <div className="shell absolute inset-x-0 bottom-0 z-20 pb-5 sm:pb-8">
+        <div key={current.label} className="max-w-3xl motion-safe:animate-fade-up">
+          <p className="mb-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-accent sm:mb-4">
+            <span className="h-px w-8 bg-accent" aria-hidden="true" />
+            {current.kicker}
+          </p>
+          <p className="display text-[clamp(3.2rem,11vw,8.5rem)] drop-shadow-[0_2px_24px_rgb(var(--color-night)/0.45)]">
+            <span className="block">{current.title[0]}</span>
+            <span className="block text-accent">{current.title[1]}</span>
+          </p>
+        </div>
         <Link
-          key={current.label}
+          key={`cta-${current.label}`}
           to={current.cta.to}
-          className="btn-light mb-5 h-11 px-6 motion-safe:animate-fade-up sm:mb-6"
+          className="btn-accent mb-5 mt-6 h-11 px-6 motion-safe:animate-fade-up sm:mb-6 sm:mt-8"
         >
           {current.cta.label}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -190,7 +210,7 @@ export function HeroCarousel() {
                     >
                       <span
                         ref={(el) => (barRefs.current[i] = el)}
-                        className={`absolute inset-0 origin-left rounded-full bg-canvas ${active ? '' : 'hidden'}`}
+                        className={`absolute inset-0 origin-left rounded-full bg-accent ${active ? '' : 'hidden'}`}
                         style={{ transform: 'scaleX(0)' }}
                       />
                     </span>

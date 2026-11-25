@@ -108,7 +108,7 @@ export function Footer() {
           <p>
             © {new Date().getFullYear()} {storeConfig.name}. Precios en quetzales (Q).
           </p>
-          <p>Pedidos, envío y pago se confirman por WhatsApp.</p>
+          <p>Te contactamos para confirmar envío y pago de cada pedido.</p>
         </div>
       </div>
     </footer>

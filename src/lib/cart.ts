@@ -1,5 +1,8 @@
 import type { CartLine, Product } from '../types';
 import { roundMoney } from './format';
+import { priceCart } from './promotions';
+import type { CartPricingItem } from './promotions';
+import type { Promotion } from '../types';
 
 export const CART_STORAGE_KEY = 'fitstore-cart-v1';
 
@@ -42,7 +45,14 @@ export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {
 export interface DetailedLine extends CartLine {
   key: string;
   product: Product;
+  /** Precio por unidad que se cobra (promedio si el descuento es solo en algunas unidades). */
   unitPrice: number;
+  /** Precio normal por unidad, sin descuento. */
+  originalUnitPrice: number;
+  /** Promoción que bajó el precio de este artículo (null si no tiene descuento). */
+  promotion: Promotion | null;
+  /** Descuento total del artículo. */
+  discount: number;
   subtotal: number;
 }
 
@@ -51,27 +61,46 @@ export interface DetailedLine extends CartLine {
  * talla o color ya no existen (por ejemplo, si se editó el catálogo).
  */
 export function detailLines(lines: CartLine[], catalog: Product[]): DetailedLine[] {
-  return lines.flatMap((line) => {
+  const valid = lines.flatMap((line) => {
     const product = catalog.find((p) => p.id === line.productId);
     if (!product) return [];
     if (!product.colors.some((c) => c.name === line.color)) return [];
     const sizeOk = product.sizes.length ? !!line.size && product.sizes.includes(line.size) : line.size === null;
     if (!sizeOk) return [];
-    return [
-      {
-        ...line,
-        key: lineKey(line),
-        product,
-        unitPrice: product.price,
-        subtotal: roundMoney(product.price * line.quantity),
-      },
-    ];
+    return [{ line, product, key: lineKey(line) }];
   });
+  // Las promociones se calculan sobre todo el carrito (p. ej. "segundo par a mitad de precio").
+  const { lines: priced } = priceCart(valid.map(pricingItem));
+  return valid.map(({ line, product, key }, i) => ({
+    ...line,
+    key,
+    product,
+    unitPrice: priced[i].unitPrice,
+    originalUnitPrice: product.price,
+    promotion: priced[i].promotion,
+    discount: priced[i].discount,
+    subtotal: priced[i].subtotal,
+  }));
 }
+
+const pricingItem = ({ line, product, key }: { line: CartLine; product: Product; key: string }): CartPricingItem => ({
+  key,
+  productId: product.id,
+  name: product.name,
+  category: product.category,
+  unitPrice: product.price,
+  quantity: line.quantity,
+});
+
+/** Sugerencias del tipo "Agrega 1 unidad más y el de menor precio sale a mitad". */
+export const cartPromotionHints = (lines: DetailedLine[]) =>
+  priceCart(lines.map((l) => pricingItem({ line: l, product: l.product, key: l.key }))).hints;
 
 export const cartTotals = (lines: DetailedLine[]) => ({
   units: lines.reduce((sum, l) => sum + l.quantity, 0),
   total: roundMoney(lines.reduce((sum, l) => sum + l.subtotal, 0)),
+  /** Cuánto ahorra el cliente con las promociones. */
+  savings: roundMoney(lines.reduce((sum, l) => sum + l.discount, 0)),
 });
 
 /** Lee el carrito guardado. Ignora datos corruptos o con formato inválido. */

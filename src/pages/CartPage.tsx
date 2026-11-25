@@ -1,22 +1,30 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Info, MessageCircle, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Info, ShoppingBag } from 'lucide-react';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { CartLineItem } from '../components/CartLineItem';
 import { Dialog } from '../components/Dialog';
+import { PageBanner } from '../components/PageBanner';
+import { PromotionHints } from '../components/PromotionHints';
 import { useCart } from '../context/CartContext';
+import { homeImages } from '../data/products';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatPrice } from '../lib/format';
 
 export function CartPage() {
-  const { lines, units, total, openCheckout, clear } = useCart();
+  const { lines, units, total, savings, openCheckout, clear } = useCart();
   const [confirmClear, setConfirmClear] = useState(false);
   useDocumentTitle('Carrito');
 
   return (
     <div className="shell pt-6 sm:pt-8">
       <Breadcrumbs items={[{ label: 'Inicio', to: '/' }, { label: 'Carrito' }]} />
-      <h1 className="display mt-5 text-[clamp(3rem,10vw,6rem)]">Carrito</h1>
+      <PageBanner
+        title="Carrito"
+        description={lines.length ? 'Revisa tu pedido y confírmalo' : 'Todo listo para tu próximo entrenamiento'}
+        image={homeImages.cart}
+        count={lines.length ? { value: units, singular: 'artículo', plural: 'artículos' } : undefined}
+      />
 
       {lines.length === 0 ? (
         <div className="mt-8 flex flex-col items-center rounded-3xl border border-dashed border-line px-6 py-16 text-center sm:py-24">
@@ -65,8 +73,14 @@ export function CartPage() {
               <dl className="mt-6 space-y-3 text-[15px]">
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted">Subtotal ({units} {units === 1 ? 'unidad' : 'unidades'})</dt>
-                  <dd className="font-semibold tabular-nums">{formatPrice(total)}</dd>
+                  <dd className="font-semibold tabular-nums">{formatPrice(total + savings)}</dd>
                 </div>
+                {savings > 0 && (
+                  <div className="flex justify-between gap-4 font-semibold text-accent-strong" data-testid="cart-savings">
+                    <dt>Descuentos por promociones</dt>
+                    <dd className="tabular-nums">-{formatPrice(savings)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted">Envío</dt>
                   <dd className="text-right font-medium">Costo de envío por confirmar</dd>
@@ -78,13 +92,14 @@ export function CartPage() {
                   </dd>
                 </div>
               </dl>
+              <PromotionHints className="mt-6" />
               <button type="button" onClick={openCheckout} className="btn-accent mt-6 w-full">
-                <MessageCircle className="h-[18px] w-[18px]" aria-hidden="true" />
-                Realizar pedido por WhatsApp
+                <CheckCircle2 className="h-[18px] w-[18px]" aria-hidden="true" />
+                Confirmar pedido
               </button>
               <p className="mt-4 flex gap-2 text-[13px] leading-relaxed text-muted">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                La disponibilidad, el costo de envío y el pago se confirman por WhatsApp. El total no incluye envío.
+                Al confirmar, registramos tu pedido y te contactamos para confirmar disponibilidad, envío y pago. El total no incluye envío.
               </p>
             </div>
           </aside>

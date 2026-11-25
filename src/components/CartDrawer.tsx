@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, MessageCircle, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../lib/format';
 import { CartLineItem } from './CartLineItem';
 import { Dialog } from './Dialog';
+import { PromotionHints } from './PromotionHints';
 
 export function CartDrawer() {
-  const { lines, units, total, drawerOpen, closeDrawer, openCheckout, lastAddedKey } = useCart();
+  const { lines, units, total, savings, drawerOpen, closeDrawer, openCheckout, lastAddedKey } = useCart();
   const justAdded = lines.find((l) => l.key === lastAddedKey);
 
   return (
@@ -22,14 +23,21 @@ export function CartDrawer() {
       footer={
         lines.length > 0 && (
           <div className="space-y-3">
+            <PromotionHints onNavigate={closeDrawer} />
+            {savings > 0 && (
+              <div className="flex items-baseline justify-between text-sm font-semibold text-accent-strong" data-testid="cart-savings">
+                <span>Ahorras con promociones</span>
+                <span className="tabular-nums">-{formatPrice(savings)}</span>
+              </div>
+            )}
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-muted">Total de productos</span>
               <span className="text-lg font-bold tabular-nums">{formatPrice(total)}</span>
             </div>
             <p className="text-[13px] text-muted">Costo de envío por confirmar.</p>
             <button type="button" className="btn-accent w-full" onClick={openCheckout}>
-              <MessageCircle className="h-[18px] w-[18px]" aria-hidden="true" />
-              Realizar pedido por WhatsApp
+              <CheckCircle2 className="h-[18px] w-[18px]" aria-hidden="true" />
+              Confirmar pedido
             </button>
             <Link to="/carrito" onClick={closeDrawer} className="btn-outline w-full">
               Ver carrito

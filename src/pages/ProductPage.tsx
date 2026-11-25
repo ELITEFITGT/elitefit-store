@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertCircle, Check, MessageCircle, Ruler, ShoppingBag } from 'lucide-react';
+import { AlertCircle, Check, MessageCircle, Ruler, ShoppingBag, Tag } from 'lucide-react';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Dialog } from '../components/Dialog';
 import { Img } from '../components/Img';
@@ -11,19 +11,29 @@ import { storeConfig } from '../config/store';
 import { useCart } from '../context/CartContext';
 import { categoryName, getProductBySlug, products } from '../data/products';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { formatPrice } from '../lib/format';
+import { flyToCart } from '../lib/flyToCart';
+import { buildWhatsAppUrl } from '../lib/whatsapp';
+import { benefitText, endsText, priceWithPromotion, scopeText } from '../lib/promotions';
+import { BundleOffer, Price, PromoBadge } from '../components/Price';
 import type { Product } from '../types';
 import { NotFoundPage } from './NotFoundPage';
 
-function Gallery({ product }: { product: Product }) {
+function Gallery({ product, color }: { product: Product; color: string | null }) {
   const [active, setActive] = useState(0);
+
+  // Al elegir un color, se muestra la primera foto de ese color (si existe).
+  useEffect(() => {
+    const index = color ? product.images.findIndex((img) => img.color === color) : -1;
+    if (index !== -1) setActive(index);
+  }, [color, product.images]);
+
   const image = product.images[active] ?? product.images[0];
   const multiple = product.images.length > 1;
 
   return (
     // self-start/items-start: la galería mide lo que mide la foto y no se estira con la columna de información.
     <div className="flex flex-col gap-3 self-start md:flex-row-reverse md:items-start md:gap-4">
-      <div className="relative min-w-0 flex-1 overflow-hidden rounded-3xl bg-line/40">
+      <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg bg-line/40">
         <Img
           key={image.src}
           src={image.src}
@@ -32,6 +42,7 @@ function Gallery({ product }: { product: Product }) {
           height={1250}
           priority
           sizes="(min-width: 1024px) 50vw, 100vw"
+          data-product-main-image
           className="aspect-[4/5] w-full object-cover motion-safe:animate-fade-in"
         />
         {multiple && (
@@ -49,7 +60,7 @@ function Gallery({ product }: { product: Product }) {
                 onClick={() => setActive(i)}
                 aria-label={`Ver imagen ${i + 1} de ${product.images.length}`}
                 aria-current={i === active ? 'true' : undefined}
-                className={`block w-full overflow-hidden rounded-xl ring-offset-2 ring-offset-canvas transition ${
+                className={`block w-full overflow-hidden rounded-md ring-offset-2 ring-offset-canvas transition ${
                   i === active ? 'ring-2 ring-ink' : 'opacity-70 hover:opacity-100'
                 }`}
               >
@@ -64,7 +75,7 @@ function Gallery({ product }: { product: Product }) {
 }
 
 function ProductDetail({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem, openDrawer } = useCart();
   const needsSize = product.sizes.length > 0;
   const [color, setColor] = useState<string | null>(product.colors.length === 1 ? product.colors[0].name : null);
   const [size, setSize] = useState<string | null>(null);
@@ -78,6 +89,7 @@ function ProductDetail({ product }: { product: Product }) {
   const uid = useId();
 
   useDocumentTitle(product.name);
+  const pricing = priceWithPromotion(product, product.price);
 
   useEffect(() => {
     if (!added) return;
@@ -93,10 +105,12 @@ function ProductDetail({ product }: { product: Product }) {
       group?.querySelector<HTMLInputElement>('input')?.focus();
       return;
     }
-    const wasCapped = addItem({ productId: product.id, color: color!, size: needsSize ? size : null, quantity });
+    const wasCapped = addItem({ productId: product.id, color: color!, size: needsSize ? size : null, quantity }, { openDrawer: false });
     setCapped(wasCapped);
     setAdded(true);
     setQuantity(1);
+    // La foto vuela a la bolsa del encabezado; al llegar, se abre el carrito.
+    void flyToCart(document.querySelector<HTMLElement>('[data-product-main-image]')).then(openDrawer);
   };
 
   const related = [
@@ -116,12 +130,34 @@ function ProductDetail({ product }: { product: Product }) {
         />
 
         <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-14 xl:gap-20">
-          <Gallery product={product} />
+          <Gallery product={product} color={color} />
 
           <div className="lg:sticky lg:top-24 lg:self-start">
             <p className="eyebrow">{categoryName(product.category)}</p>
-            <h1 className="display mt-3 text-[clamp(2.4rem,6vw,3.75rem)]">{product.name}</h1>
-            <p className="mt-4 text-2xl font-bold tabular-nums">{formatPrice(product.price)}</p>
+            <h1 className="mt-3 text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{product.name}</h1>
+            <p className="mt-4 flex flex-wrap items-center gap-3">
+              <Price price={pricing.price} originalPrice={pricing.originalPrice} priceClassName="text-2xl font-bold" />
+              <PromoBadge promotion={pricing.promotion} className="text-xs" />
+            </p>
+            <BundleOffer promotion={pricing.promotion} price={pricing.price} showSavings className="mt-1 text-[15px]" />
+            {pricing.promotion && (
+              <div className="mt-4 flex gap-3 rounded-lg border border-accent/40 bg-accent/10 p-4">
+                <Tag className="mt-0.5 h-5 w-5 shrink-0 text-accent-strong" aria-hidden="true" />
+                <div className="text-sm leading-relaxed">
+                  <p className="font-bold">{pricing.promotion.title}</p>
+                  <p className="font-semibold text-accent-strong">{benefitText(pricing.promotion)}</p>
+                  <p className="text-muted">
+                    {scopeText(pricing.promotion)} {endsText(pricing.promotion)}.
+                  </p>
+                  <Link
+                    to={`/promociones#${pricing.promotion.id}`}
+                    className="mt-1 inline-block font-semibold text-accent-strong underline underline-offset-4"
+                  >
+                    Ver la promoción
+                  </Link>
+                </div>
+              </div>
+            )}
             <p className="mt-5 max-w-prose text-[15px] leading-relaxed text-muted sm:text-base">{product.description}</p>
 
             <div className="mt-8 space-y-7">
@@ -242,17 +278,19 @@ function ProductDetail({ product }: { product: Product }) {
                 <p className="mb-3 text-sm font-bold">
                   Cantidad
                 </p>
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex items-stretch gap-2 sm:gap-3">
                   <QuantitySelector value={quantity} onChange={setQuantity} max={storeConfig.maxQuantityPerItem} label={product.name} />
                   <button
                     type="button"
                     onClick={handleAdd}
-                    className={`btn flex-1 text-[15px] ${added ? 'bg-success text-white' : 'bg-ink text-canvas hover:bg-ink/85'}`}
+                    className={`btn min-w-0 flex-1 whitespace-nowrap px-4 text-[15px] transition-[background-color,transform] active:scale-[0.97] ${
+                      added ? 'bg-accent text-accent-ink' : 'bg-ink text-canvas hover:bg-ink/85'
+                    }`}
                   >
                     {added ? (
                       <>
-                        <Check className="h-5 w-5" aria-hidden="true" />
-                        Agregado al carrito
+                        <Check className="h-5 w-5 shrink-0 motion-safe:animate-pop" aria-hidden="true" />
+                        <span className="truncate motion-safe:animate-fade-in">Agregado a la bolsa</span>
                       </>
                     ) : (
                       <>
@@ -271,13 +309,18 @@ function ProductDetail({ product }: { product: Product }) {
                 </div>
               </div>
 
-              <p className="flex gap-2.5 rounded-2xl bg-surface p-4 text-sm leading-relaxed text-muted">
+              <p className="flex gap-2.5 rounded-lg bg-surface p-4 text-sm leading-relaxed text-muted">
                 <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-ink" aria-hidden="true" />
                 <span>
-                  Pedido por WhatsApp. La disponibilidad, el costo de envío y el pago se confirman por ese medio.{' '}
-                  <Link to="/info/como-comprar" className="font-semibold text-ink underline underline-offset-4">
-                    Cómo comprar
-                  </Link>
+                  Confirma tu pedido y te contactamos para coordinar envío y pago. ¿Dudas sobre este producto?{' '}
+                  <a
+                    href={buildWhatsAppUrl(storeConfig.whatsappNumber, `Hola, ${storeConfig.name}. Tengo una consulta sobre: ${product.name}`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-ink underline underline-offset-4"
+                  >
+                    Escríbenos por WhatsApp
+                  </a>
                 </span>
               </p>
 
@@ -307,12 +350,21 @@ function ProductDetail({ product }: { product: Product }) {
       </section>
 
       {product.sizeGuide && (
-        <Dialog open={guideOpen} onClose={() => setGuideOpen(false)} title="Guía de tallas" size="lg">
+        <Dialog open={guideOpen} onClose={() => setGuideOpen(false)} title="Guía de tallas" variant="right" size="lg">
           <div className="px-5 py-6 sm:px-6">
             <p className="mb-5 text-sm text-muted">
               Medidas de referencia en centímetros. Si estás entre dos tallas, te recomendamos consultarnos por WhatsApp.
             </p>
-            <SizeGuide only={product.sizeGuide} />
+            <SizeGuide
+              only={product.sizeGuide}
+              productSizes={product.sizes}
+              narrow
+              onSelectSize={(s) => {
+                setSize(s);
+                setErrors((e) => ({ ...e, size: false }));
+                setGuideOpen(false);
+              }}
+            />
           </div>
         </Dialog>
       )}

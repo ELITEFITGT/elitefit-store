@@ -1,3 +1,4 @@
+import supabaseProducts from 'virtual:supabase-catalog';
 import type { CategoryId, Product, ProductImage } from '../types';
 
 /**
@@ -45,15 +46,15 @@ export const categories: { id: CategoryId; name: string; description: string; im
 export const categoryName = (id: CategoryId) => categories.find((c) => c.id === id)?.name ?? id;
 
 /** Orden en que se muestran las tallas de ropa en filtros y selectores. */
-export const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+export const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 /** Tallas de calzado (numeración US). */
-export const shoeSizeOrder = ['5', '6', '7', '8', '9', '10', '11'];
+export const shoeSizeOrder = ['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '11'];
 
 const BLACK = { name: 'Negro', hex: '#151515' };
 const WHITE = { name: 'Blanco', hex: '#F7F7F5' };
 
-export const products: Product[] = [
+const demoProducts: Product[] = [
   {
     id: 'p01',
     slug: 'leggings-sculpt-tiro-alto',
@@ -439,6 +440,9 @@ export const products: Product[] = [
   },
 ];
 
+/** Productos de Supabase; si no hay conexión, los de ejemplo. */
+export const products: Product[] = supabaseProducts.length ? supabaseProducts : demoProducts;
+
 export const getProductBySlug = (slug: string) => products.find((p) => p.slug === slug);
 export const getProductById = (id: string) => products.find((p) => p.id === id);
 
@@ -446,4 +450,12 @@ export const getProductById = (id: string) => products.find((p) => p.id === id);
 export const homeImages = {
   newCollection: unsplash('1575052814086-f385e2e2ad1b', 'Mujer en postura de yoga con conjunto color oliva'),
   newCollectionSecondary: unsplash('1526506118085-60ce8714f8c5', 'Hombre haciendo dominadas con short negro'),
+  /** Fotos de "Cómo comprar" en la página de inicio (una por paso). */
+  howToBuy: [
+    unsplash('1489987707025-afc232f7ea0f', 'Camisetas de colores colgadas en un perchero'),
+    unsplash('1484807352052-23338990c6c6', 'Manos escribiendo en una computadora portátil'),
+    unsplash('1611746872915-64382b5c76da', 'Celular con las aplicaciones de WhatsApp y mensajes'),
+  ],
+  /** Banner de la página del carrito. */
+  cart: unsplash('1607082348824-0a96f2a4b9da', 'Bolsas de compra rojas sobre fondo oscuro'),
 };

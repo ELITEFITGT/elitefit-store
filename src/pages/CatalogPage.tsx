@@ -4,8 +4,9 @@ import { ArrowDownUp, ChevronDown, Search, SearchX, SlidersHorizontal, X } from 
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { Dialog } from '../components/Dialog';
+import { PageBanner } from '../components/PageBanner';
 import { ProductGrid } from '../components/ProductCard';
-import { categories, categoryName, products } from '../data/products';
+import { categories, categoryName, homeImages, products } from '../data/products';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   countActiveFilters,
@@ -49,6 +50,14 @@ export function CatalogPage() {
     filters.categories.length === 1 ? categoryName(filters.categories[0]) : filters.sort === 'novedades' && !activeCount ? 'Novedades' : 'Catálogo';
   useDocumentTitle(title);
 
+  // Banner: foto de la categoría elegida; en Catálogo y Novedades, fotos generales de la tienda.
+  const selectedCategory = filters.categories.length === 1 ? categories.find((c) => c.id === filters.categories[0]) : undefined;
+  const banner = selectedCategory
+    ? { image: selectedCategory.image, description: selectedCategory.description }
+    : title === 'Novedades'
+      ? { image: homeImages.newCollection, description: 'Lo más reciente de la tienda' }
+      : { image: homeImages.newCollectionSecondary, description: 'Ropa y accesorios para entrenar' };
+
   const chips = [
     ...(filters.q.trim() ? [{ key: 'q', label: `“${filters.q.trim()}”`, remove: () => apply({ ...filters, q: '' }) }] : []),
     ...filters.categories.map((c) => ({
@@ -72,12 +81,12 @@ export function CatalogPage() {
     <div className="shell pt-6 sm:pt-8">
       <Breadcrumbs items={[{ label: 'Inicio', to: '/' }, { label: title }]} />
 
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <h1 className="display text-[clamp(3rem,10vw,6rem)]">{title}</h1>
-        <p className="pb-2 text-sm text-muted" aria-live="polite">
-          {results.length} {results.length === 1 ? 'producto' : 'productos'}
-        </p>
-      </div>
+      <PageBanner
+        title={title}
+        description={banner.description}
+        image={banner.image}
+        count={{ value: results.length, singular: 'producto', plural: 'productos' }}
+      />
 
       {/* Barra de herramientas: búsqueda, filtros (móvil) y orden */}
       <div className="sticky top-16 z-30 -mx-4 mt-6 border-b border-line bg-canvas/95 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none">

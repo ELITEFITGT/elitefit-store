@@ -14,22 +14,22 @@ export const infoPages: InfoPage[] = [
   {
     slug: 'como-comprar',
     title: 'Cómo comprar',
-    intro: 'Tu pedido se arma en esta página y se completa en una conversación por WhatsApp.',
+    intro: 'Arma tu pedido en esta página, confírmalo y nosotros te contactamos.',
     sections: [
       {
         heading: '1. Elige tus productos',
         paragraphs: ['Explora el catálogo, selecciona talla y color, y agrega los productos al carrito.'],
       },
       {
-        heading: '2. Envía tu pedido por WhatsApp',
+        heading: '2. Confirma tu pedido',
         paragraphs: [
-          'Desde el carrito completa tu nombre y la modalidad de entrega. Se abrirá WhatsApp con el detalle del pedido listo para enviar.',
+          'Desde el carrito completa tu nombre, teléfono y la modalidad de entrega, y presiona "Confirmar pedido". Recibirás un número de pedido.',
         ],
       },
       {
         heading: '3. Confirmamos contigo',
         paragraphs: [
-          'Por WhatsApp te confirmamos la disponibilidad, el costo de envío y la forma de pago. El pedido queda confirmado solo cuando lo acordemos por ese medio.',
+          'Te contactamos al teléfono que nos diste para confirmar la disponibilidad, el costo de envío y la forma de pago.',
         ],
       },
     ],
@@ -41,11 +41,11 @@ export const infoPages: InfoPage[] = [
     sections: [
       {
         heading: 'Costo de envío',
-        paragraphs: ['El costo y el tiempo de envío dependen de tu ubicación y se confirman por WhatsApp antes de cerrar el pedido.'],
+        paragraphs: ['El costo y el tiempo de envío dependen de tu ubicación. Te los confirmamos cuando te contactemos por tu pedido.'],
       },
       {
         heading: 'Recoger',
-        paragraphs: ['Si eliges recoger, te indicaremos por WhatsApp el punto y el horario de entrega.'],
+        paragraphs: ['Si eliges recoger, te indicaremos el punto y el horario de entrega cuando te contactemos.'],
       },
     ],
   },
@@ -75,11 +75,11 @@ export const infoPages: InfoPage[] = [
     sections: [
       {
         heading: '¿El pedido se paga en la página?',
-        paragraphs: ['No. La página solo prepara el mensaje de tu pedido. La forma de pago se acuerda por WhatsApp.'],
+        paragraphs: ['No. La página registra tu pedido y la forma de pago se acuerda cuando te contactamos.'],
       },
       {
-        heading: '¿Mi pedido queda confirmado al abrir WhatsApp?',
-        paragraphs: ['No. Primero debes enviar el mensaje y luego confirmamos contigo la disponibilidad, el envío y el pago.'],
+        heading: '¿Cómo sé que recibieron mi pedido?',
+        paragraphs: ['Al confirmar verás tu número de pedido. Luego te contactamos para confirmar la disponibilidad, el envío y el pago. Si tienes dudas, escríbenos por WhatsApp.'],
       },
       {
         heading: '¿Se guarda mi carrito?',

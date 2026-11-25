@@ -10,14 +10,15 @@
  * (el rosa claro no tiene contraste suficiente para texto pequeño).
  */
 :root {
-  --color-canvas: 244 242 238;   /* fondo general, hueso claro */
+  --color-canvas: 243 244 247;   /* fondo general, blanco frío (#F3F4F7) */
   --color-surface: 255 255 255;  /* tarjetas y paneles */
-  --color-ink: 20 20 20;         /* texto principal y botones */
-  --color-muted: 102 99 94;      /* texto secundario */
-  --color-line: 223 219 212;     /* bordes */
-  --color-accent: 242 135 174;   /* rosa ELITEFIT (#F287AE) */
-  --color-accent-ink: 20 20 20;  /* texto sobre el rosa */
-  --color-accent-strong: 176 38 96; /* rosa profundo para texto y foco (#B02660) */
+  --color-night: 6 30 31;        /* verde azulado casi negro (#061E1F): sombras y filtros de las fotos */
+  --color-ink: 14 67 68;         /* verde azulado profundo (#0E4344): texto, botones y bloques oscuros */
+  --color-muted: 90 110 112;     /* texto secundario, gris verdoso (#5A6E70) */
+  --color-line: 220 227 229;     /* bordes (#DCE3E5) */
+  --color-accent: 240 80 159;    /* rosa de la marca (#F0509F) */
+  --color-accent-ink: 8 42 43;   /* texto sobre el rosa (#082A2B), contraste 4.6:1 */
+  --color-accent-strong: 181 23 106; /* rosa profundo para texto y foco (#B5176A), contraste 5.7:1 */
   --color-danger: 185 28 28;
   --color-success: 21 128 61;
 }
@@ -104,8 +105,8 @@
  * - --splash-accent: líneas, pulso y barra de progreso (por defecto, el rosa de la marca).
  * ========================================================================== */
 :root {
-  --splash-bg: 11 11 12;
-  --splash-text: 244 242 238;
+  --splash-bg: var(--color-night);
+  --splash-text: 243 244 247;
   --splash-accent: var(--color-accent);
 }
 

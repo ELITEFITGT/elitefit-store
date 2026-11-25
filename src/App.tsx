@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { InfoPage } from './pages/InfoPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProductPage } from './pages/ProductPage';
+import { PromotionsPage } from './pages/PromotionsPage';
 
 export function App() {
   return (
@@ -16,6 +17,7 @@ export function App() {
           <Route index element={<HomePage />} />
           <Route path="catalogo" element={<CatalogPage />} />
           <Route path="producto/:slug" element={<ProductPage />} />
+          <Route path="promociones" element={<PromotionsPage />} />
           <Route path="carrito" element={<CartPage />} />
           <Route path="info/:slug" element={<InfoPage />} />
           <Route path="*" element={<NotFoundPage />} />

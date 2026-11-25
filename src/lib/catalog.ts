@@ -1,5 +1,6 @@
 import type { CategoryId, Product } from '../types';
 import { normalize } from './format';
+import { currentPrice } from './promotions';
 
 export const sortOptions = [
   { id: 'destacados', label: 'Destacados' },
@@ -70,7 +71,7 @@ export function filterProducts(products: Product[], filters: CatalogFilters): Pr
     if (query && !normalize(p.name).includes(query)) return false;
     if (filters.categories.length && !filters.categories.includes(p.category)) return false;
     if (filters.sizes.length && !p.sizes.some((s) => filters.sizes.includes(s))) return false;
-    if (range && (p.price < range.min || p.price >= range.max)) return false;
+    if (range && (currentPrice(p) < range.min || currentPrice(p) >= range.max)) return false;
     return true;
   });
 
@@ -79,9 +80,9 @@ export function filterProducts(products: Product[], filters: CatalogFilters): Pr
   indexed.sort((a, b) => {
     switch (filters.sort) {
       case 'precio-asc':
-        return a.p.price - b.p.price || a.i - b.i;
+        return currentPrice(a.p) - currentPrice(b.p) || a.i - b.i;
       case 'precio-desc':
-        return b.p.price - a.p.price || a.i - b.i;
+        return currentPrice(b.p) - currentPrice(a.p) || a.i - b.i;
       case 'novedades':
         return b.p.addedAt.localeCompare(a.p.addedAt) || a.i - b.i;
       default:

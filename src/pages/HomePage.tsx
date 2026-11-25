@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, CheckCircle2, MessageCircle, ShoppingBag } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { HeroCarousel } from '../components/HeroCarousel';
 import { Img } from '../components/Img';
 import { ProductGrid } from '../components/ProductCard';
 import { categories, homeImages, products } from '../data/products';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { formatPrice } from '../lib/format';
+import { activePromotions, benefitText, currentPrice, endsText } from '../lib/promotions';
 
 function SectionHeader({ eyebrow, title, id, link }: { eyebrow: string; title: string; id: string; link?: { to: string; label: string } }) {
   return (
@@ -19,7 +20,10 @@ function SectionHeader({ eyebrow, title, id, link }: { eyebrow: string; title: s
       {link && (
         <Link to={link.to} className="group hidden shrink-0 items-center gap-1.5 pb-2 text-sm font-semibold sm:inline-flex">
           <span className="border-b border-ink/30 transition-colors group-hover:border-ink">{link.label}</span>
-          <ArrowUpRight className="h-4 w-4 transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" aria-hidden="true" />
+          <ArrowUpRight
+            className="h-4 w-4 transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
         </Link>
       )}
     </div>
@@ -63,11 +67,66 @@ function Categories() {
   );
 }
 
+function Promotions() {
+  const active = activePromotions().slice(0, 3);
+  if (!active.length) return null;
+  const single = active.length === 1;
+  return (
+    <section className="shell mt-20 sm:mt-28" aria-labelledby="promos-title">
+      <SectionHeader
+        eyebrow="Ofertas por tiempo limitado"
+        title="Promociones"
+        id="promos-title"
+        link={{ to: '/promociones', label: 'Ver todas' }}
+      />
+      {/* Una promoción: banner junto a la información (cerca de su tamaño real, para que se vea nítido). Varias: en columnas. */}
+      <ul className={`grid gap-3 sm:gap-5 ${active.length > 1 ? 'md:grid-cols-2' : ''} ${active.length > 2 ? 'xl:grid-cols-3' : ''}`}>
+        {active.map((promo) => (
+          <li key={promo.id}>
+            <Link
+              to={`/promociones#${promo.id}`}
+              className={`group flex h-full flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-accent ${
+                single ? 'lg:grid lg:grid-cols-[minmax(0,760px)_1fr]' : ''
+              }`}
+            >
+              <span className="block overflow-hidden">
+                <Img
+                  src={promo.banner.src}
+                  alt={promo.banner.alt}
+                  width={1600}
+                  height={580}
+                  sizes={single ? '(min-width: 1024px) 760px, 100vw' : '(min-width: 768px) 50vw, 100vw'}
+                  className="aspect-[11/4] w-full object-cover transition duration-700 motion-safe:group-hover:scale-[1.02]"
+                />
+              </span>
+              <span className={`flex flex-1 items-center justify-between gap-4 p-5 sm:px-6 ${single ? 'lg:px-8' : ''}`}>
+                <span>
+                  <span className={`block font-bold leading-tight ${single ? 'text-lg lg:text-2xl' : 'text-lg'}`}>{promo.title}</span>
+                  <span className="mt-1 block text-sm font-semibold text-accent-strong">{benefitText(promo)}</span>
+                  <span className="mt-1 block text-sm text-muted">{endsText(promo)}</span>
+                </span>
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-transform motion-safe:group-hover:-rotate-45">
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Featured() {
   const featured = products.filter((p) => p.featured).slice(0, 8);
   return (
     <section className="shell mt-20 sm:mt-28" aria-labelledby="destacados-title">
-      <SectionHeader eyebrow="Lo más elegido" title="Destacados" id="destacados-title" link={{ to: '/catalogo', label: 'Ver todo el catálogo' }} />
+      <SectionHeader
+        eyebrow="Lo más elegido"
+        title="Destacados"
+        id="destacados-title"
+        link={{ to: '/catalogo', label: 'Ver todo el catálogo' }}
+      />
       <ProductGrid products={featured} />
       <Link to="/catalogo" className="btn-outline mt-10 w-full sm:hidden">
         Ver todo el catálogo
@@ -124,7 +183,7 @@ function NewCollection() {
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{p.name}</span>
-                    <span className="text-sm tabular-nums text-canvas/60">{formatPrice(p.price)}</span>
+                    <span className="text-sm tabular-nums text-canvas/60">{formatPrice(currentPrice(p))}</span>
                   </span>
                   <ArrowUpRight
                     className="h-5 w-5 shrink-0 text-canvas/50 transition group-hover:text-canvas motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5"
@@ -145,30 +204,57 @@ function NewCollection() {
 }
 
 const steps = [
-  { Icon: ShoppingBag, title: 'Elige y agrega', text: 'Selecciona talla, color y cantidad. Tu carrito se guarda en este navegador.' },
-  { Icon: MessageCircle, title: 'Pide por WhatsApp', text: 'Completa tus datos y abriremos WhatsApp con el detalle del pedido.' },
-  { Icon: CheckCircle2, title: 'Confirmamos contigo', text: 'Por chat confirmamos disponibilidad, costo de envío y forma de pago.' },
+  {
+    title: 'Elige y agrega',
+    text: 'Explora el catálogo, selecciona talla, color y cantidad, y agrégalo al carrito. Tu carrito se guarda en este navegador.',
+  },
+  {
+    title: 'Confirma tu pedido',
+    text: 'Completa tus datos de contacto y entrega, y confirma. Tu pedido queda registrado con un número.',
+  },
+  {
+    title: 'Te contactamos',
+    text: 'Te llamamos o escribimos para confirmar disponibilidad, costo de envío y forma de pago.',
+  },
 ];
 
+/** Tres pasos en zigzag: foto de un lado y descripción del otro, alternando. */
 function HowToBuy() {
   return (
     <section className="shell mt-20 sm:mt-28" aria-labelledby="como-title">
       <SectionHeader eyebrow="Así de simple" title="Cómo comprar" id="como-title" link={{ to: '/info/como-comprar', label: 'Más detalles' }} />
-      <ol className="grid gap-3 sm:grid-cols-3 sm:gap-5">
-        {steps.map(({ Icon, title, text }, i) => (
-          <li key={title} className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-canvas">
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <span className="display text-5xl text-line" aria-hidden="true">
-                0{i + 1}
-              </span>
-            </div>
-            <h3 className="mt-8 text-lg font-bold">{title}</h3>
-            <p className="mt-2 text-[15px] leading-relaxed text-muted">{text}</p>
-          </li>
-        ))}
+      <ol className="space-y-12 sm:space-y-16 lg:space-y-20">
+        {steps.map(({ title, text }, i) => {
+          const image = homeImages.howToBuy[i];
+          const reversed = i % 2 === 1;
+          return (
+            <li key={title} className="grid items-center gap-6 sm:gap-8 md:grid-cols-2 lg:gap-16">
+              {/* Foto con el filtro de color de la marca, para que las tres se vean como una serie. */}
+              <div className={`relative isolate overflow-hidden rounded-lg bg-ink ${reversed ? 'md:order-2' : ''}`}>
+                <Img
+                  src={image.src}
+                  alt={image.alt}
+                  width={900}
+                  height={675}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  className="aspect-[4/3] w-full object-cover saturate-[.85] lg:aspect-[3/2]"
+                />
+                <div className="absolute inset-0 bg-ink opacity-30 mix-blend-color" aria-hidden="true" />
+                <div className="absolute inset-0 bg-gradient-to-t from-night/40 to-transparent" aria-hidden="true" />
+              </div>
+              <div className={reversed ? 'md:order-1 md:text-right' : ''}>
+                <p className="display text-6xl text-accent sm:text-7xl" aria-hidden="true">
+                  0{i + 1}
+                </p>
+                <h3 className="mt-3 text-2xl font-bold leading-tight sm:text-3xl">
+                  <span className="sr-only">Paso {i + 1}: </span>
+                  {title}
+                </h3>
+                <p className={`mt-3 max-w-md text-base leading-relaxed text-muted sm:text-lg ${reversed ? 'md:ml-auto' : ''}`}>{text}</p>
+              </div>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
@@ -180,6 +266,7 @@ export function HomePage() {
     <>
       <HeroCarousel />
       <Categories />
+      <Promotions />
       <Featured />
       <NewCollection />
       <HowToBuy />

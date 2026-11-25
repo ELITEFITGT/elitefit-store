@@ -4,7 +4,7 @@ import type { Connect, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
- * Monta el endpoint del asistente (/api/chat) en `npm run dev` y `npm run preview`.
+ * Monta el endpoint de pedidos (/api/pedidos) en `npm run dev` y `npm run preview`.
  * Las variables de .env se cargan solo en el proceso de Node: las que no empiezan
  * con VITE_ nunca llegan al código del navegador.
  */
@@ -12,7 +12,7 @@ import react from '@vitejs/plugin-react';
 const store = globalThis as typeof globalThis & { __elitefitInjectedEnv?: Set<string> };
 const injectedEnv = (store.__elitefitInjectedEnv ??= new Set<string>());
 
-function chatApi(mode: string): Plugin {
+function ordersApi(mode: string): Plugin {
   const mount = async (middlewares: Connect.Server) => {
     // Al reiniciar (p. ej. tras editar .env) se descartan los valores cargados antes desde .env.
     for (const key of injectedEnv) delete process.env[key];
@@ -23,14 +23,49 @@ function chatApi(mode: string): Plugin {
       process.env[key] = value;
       injectedEnv.add(key);
     }
-    const { createChatHandler } = await import('./server/chatHandler.js');
-    const handler = createChatHandler();
-    middlewares.use('/api/chat', (req, res) => void handler(req, res));
+    const { createOrderHandler } = await import('./server/orderHandler.js');
+    const orders = createOrderHandler();
+    middlewares.use('/api/pedidos', (req, res) => void orders(req, res));
   };
   return {
-    name: 'elitefit-chat-api',
+    name: 'elitefit-orders-api',
     configureServer: (server) => mount(server.middlewares),
     configurePreviewServer: (server) => mount(server.middlewares),
+  };
+}
+
+/**
+ * Catálogo desde Supabase: expone el módulo `virtual:supabase-catalog` con los productos ya convertidos.
+ * Se lee en Node con SUPABASE_SECRET_KEY al iniciar `npm run dev` o al compilar (reinicia para refrescar).
+ * Si falta la clave, falla la consulta o se corren las pruebas, devuelve [] y la tienda usa los productos de ejemplo.
+ */
+function supabaseCatalog(mode: string): Plugin {
+  const id = 'virtual:supabase-catalog';
+  const resolved = '\0' + id;
+  return {
+    name: 'elitefit-supabase-catalog',
+    resolveId: (source) => (source === id ? resolved : null),
+    async load(moduleId) {
+      if (moduleId !== resolved) return null;
+      const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+      const url = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+      const secretKey = env.SUPABASE_SECRET_KEY;
+      let products: unknown[] = [];
+      if (env.VITEST) {
+        // Las pruebas usan siempre los productos de ejemplo.
+      } else if (!url || !secretKey) {
+        this.warn('Falta VITE_SUPABASE_URL o SUPABASE_SECRET_KEY en .env: se usan los productos de ejemplo.');
+      } else {
+        try {
+          const { fetchSupabaseProducts } = await import('./server/supabaseCatalog.js');
+          products = await fetchSupabaseProducts({ url, secretKey, imageBucket: env.SUPABASE_IMAGE_BUCKET });
+          console.log(`[supabase] ${products.length} productos cargados desde Supabase.`);
+        } catch (err) {
+          this.warn(`No se pudo leer el catálogo de Supabase (${(err as Error).message}). Se usan los productos de ejemplo.`);
+        }
+      }
+      return `export default ${JSON.stringify(products)};`;
+    },
   };
 }
 
@@ -38,7 +73,7 @@ export default defineConfig(({ mode }) => ({
   // Ruta donde se publica la tienda. En GitHub Pages es /<nombre-del-repositorio>/ (lo define el workflow);
   // en Vercel o un dominio propio, la raíz.
   base: process.env.BASE_PATH || '/',
-  plugins: [react(), chatApi(mode)],
+  plugins: [react(), ordersApi(mode), supabaseCatalog(mode)],
   test: {
     environment: 'jsdom',
     globals: true,

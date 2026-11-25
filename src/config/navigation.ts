@@ -5,5 +5,6 @@ export const navLinks = [
   { label: 'Calzado', to: '/catalogo?categoria=calzado' },
   { label: 'Accesorios', to: '/catalogo?categoria=accesorios' },
   { label: 'Novedades', to: '/catalogo?orden=novedades' },
+  { label: 'Promociones', to: '/promociones' },
   { label: 'Todo', to: '/catalogo' },
 ];

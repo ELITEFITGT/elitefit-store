@@ -125,6 +125,7 @@ export function Header() {
             <button
               type="button"
               onClick={openDrawer}
+              data-cart-target
               className={`icon-btn relative -mr-2 lg:mr-0 ${iconTone}`}
               aria-label={`Abrir carrito, ${units} ${units === 1 ? 'artículo' : 'artículos'}`}
               aria-haspopup="dialog"

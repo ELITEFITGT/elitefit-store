@@ -5,3 +5,6 @@ dist
 .env
 .env.*
 !.env.example
+
+# Capturas de pruebas en navegador
+.playwright-mcp/

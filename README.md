@@ -1,20 +1,29 @@
 # ELITEFIT: tienda online de ropa fitness
 
-Tienda pública hecha con React, Vite, TypeScript y Tailwind CSS. Incluye catálogo con filtros, detalle de producto con variantes, carrito guardado en el navegador, pedido por WhatsApp y un asistente de compras con IA.
+Tienda pública hecha con React, Vite, TypeScript y Tailwind CSS. Muestra el catálogo desde **Supabase**, con filtros, detalle de producto con variantes, promociones, guía de tallas interactiva, carrito guardado en el navegador y un asistente de la tienda. Los pedidos confirmados se guardan en Supabase (`pedidos_carrito` y `pedidos_carrito_detalles`) y el equipo contacta al cliente. WhatsApp queda solo para consultas.
 
-No incluye base de datos, inicio de sesión, panel administrativo ni pagos en línea. Lo único que corre en un servidor es el endpoint del asistente de IA (`/api/chat`); sin él, la tienda funciona igual. El pedido se arma en la página y se termina en una conversación de WhatsApp.
+No incluye inicio de sesión, panel administrativo ni pagos en línea. En el servidor corren dos cosas: la lectura del catálogo desde Supabase (al iniciar o compilar) y el endpoint de pedidos (`/api/pedidos`).
 
 > **Datos de demostración.** Los productos, precios, descripciones, medidas de la guía de tallas, textos informativos, el número de WhatsApp de pruebas (`50242709260`, es decir 4270-9260) y las redes sociales son de ejemplo. Reemplázalos antes de publicar la tienda. Las fotos vienen de [Unsplash](https://unsplash.com) y solo ilustran el ejemplo.
 
-## Instalar y ejecutar
+## Instalar y ejecutar (guía para el equipo)
 
-Requisitos: Node.js 18 o superior.
+Requisitos: Node.js 18 o superior y acceso al proyecto de Supabase del ambiente (dev o prd).
 
-```bash
-npm install      # instala dependencias
-npm run dev      # servidor de desarrollo en http://localhost:5173
-npm test         # pruebas: carrito, filtros, variantes, WhatsApp y asistente (sin llamar a la IA)
-```
+1. Clona el repositorio e instala las dependencias:
+   ```bash
+   git clone https://github.com/ELITEFITGT/elitefit-store.git
+   cd elitefit-store
+   npm install
+   ```
+2. Copia `.env.example` como `.env` y llena las claves del ambiente (ver la tabla en [Pedidos en Supabase](#pedidos-en-supabase-dev--prd)). **Las claves no están en el repositorio:** pídelas a quien administra Supabase por un medio privado. Nunca subas el archivo `.env`.
+3. Si el proyecto de Supabase es nuevo, corre la migración de pedidos (ver la misma sección).
+4. Arranca la tienda:
+   ```bash
+   npm run dev      # http://localhost:5173 (catálogo de Supabase + endpoint de pedidos)
+   npm test         # pruebas (no se conectan a Supabase)
+   ```
+   En la terminal debe aparecer `[supabase] N productos cargados desde Supabase.` Si falta alguna clave, la tienda muestra los productos de ejemplo y lo avisa en la terminal.
 
 ## Versión de producción
 
@@ -38,7 +47,7 @@ GitHub Pages no puede publicar el código fuente tal cual: hay que publicar la v
 
 Notas:
 - La ruta base se define con la variable `BASE_PATH` al compilar. En Vercel o con un dominio propio no hace falta.
-- GitHub Pages solo sirve archivos estáticos. La tienda y los pedidos por WhatsApp funcionan, pero el asistente con IA no; aparece como no disponible. Para el asistente, usa Vercel (ver abajo).
+- GitHub Pages solo sirve archivos estáticos: muestra el catálogo con el que se compiló, pero **no puede guardar pedidos** (no hay servidor para `/api/pedidos`). Para una tienda con pedidos, usa Vercel con las variables de entorno del ambiente.
 
 ## Cambiar nombre, WhatsApp y textos
 
@@ -95,6 +104,8 @@ El rosa claro de la marca se usa en botones y detalles con texto negro encima (`
 
 ## Agregar o editar productos
 
+> **Los productos reales vienen de Supabase** (tablas `productos`, `variantes`, `producto_imagenes`, `tallas`, `colores` y `categorias`): se editan en tu sistema y la tienda los lee al iniciar `npm run dev` o al compilar (reinicia para ver cambios). Lo que sigue describe los **productos de ejemplo** de `src/data/products.ts`, que se usan solo si no hay conexión con Supabase y en las pruebas.
+
 Los productos están en **`src/data/products.ts`**. Para agregar uno, copia un bloque existente y cambia sus datos:
 
 ```ts
@@ -129,93 +140,61 @@ Otros archivos editables:
 - `src/lib/catalog.ts` → `priceRanges`: rangos del filtro de precio.
 - `src/config/navigation.ts`: enlaces del menú.
 
-## Cómo funciona el pedido por WhatsApp
+## Cómo funciona el pedido
 
-1. El cliente completa nombre, modalidad (envío o recoger), dirección (solo si eligió envío) y observaciones.
-2. Se arma un mensaje con productos, talla, color, cantidades, precio unitario, subtotales, total, envío por confirmar y datos de entrega. Se abre `https://wa.me/<número>?text=<mensaje codificado con encodeURIComponent>`.
-3. La página no marca el pedido como enviado ni vacía el carrito. Indica que la disponibilidad, el envío y el pago se confirman por WhatsApp.
+1. El cliente presiona **Confirmar pedido** y completa nombre, teléfono, modalidad (envío o retiro en tienda) y, si es envío, departamento, municipio, dirección y referencia.
+2. La página envía el carrito a `/api/pedidos`. El servidor vuelve a leer en Supabase el precio de cada variante (el navegador nunca decide precios) y guarda el encabezado en `pedidos_carrito` y los artículos en `pedidos_carrito_detalles`.
+3. El cliente ve su número de pedido y el carrito se vacía. Reenviar el mismo pedido (doble clic o reintento) no lo duplica.
 
-La lógica está en `src/lib/whatsapp.ts`.
+Lógica: `src/lib/order.ts` (datos y validación), `server/orders.ts` (registro en Supabase) y `src/components/CheckoutDialog.tsx` (formulario).
 
-## Asistente de compras con IA
+## Asistente de la tienda
 
-Botón flotante "Asesor de compras" (abajo a la derecha). Usa un modelo de IA para buscar productos, recomendar según actividad y presupuesto, explicar tallas, armar el carrito y preparar el pedido por WhatsApp. Trabaja sobre el **mismo carrito** de la tienda.
+Botón flotante "¿Te ayudamos?" (abajo a la derecha). **No usa IA ni servicios externos:** responde al instante, en el navegador, con los datos de la tienda.
 
-### Cómo funciona
+- Busca productos por palabra, categoría, color, talla y precio ("leggings negros talla M", "tenis hasta Q500").
+- Responde promociones vigentes, guía de tallas, envíos, formas de pago, cómo comprar, cambios y horario.
+- Muestra el carrito con el botón **Confirmar pedido**; si no entiende o no encuentra nada, ofrece el catálogo y WhatsApp.
 
-```
-Navegador                                   Servidor (/api/chat)              Proveedor
-ChatWidget → useChat ──── conversación ───▶ valida, limita, agrega reglas ──▶ Anthropic (Claude)
-     ▲                                       y herramientas permitidas
-     └─ controlador restringido ◀── llamadas a herramientas (searchProducts, addToCart, …)
-        valida argumentos y ejecuta sobre el carrito real; devuelve el resultado al modelo
-```
-
-- **La clave nunca llega al navegador.** Solo la lee el servidor (`server/`), desde la variable `ANTHROPIC_API_KEY`.
-- **El modelo no modifica nada directamente.** Pide herramientas y el controlador del navegador (`src/chat/controller.ts`) solo acepta las 9 permitidas. Antes de ejecutar valida:
-  - el producto;
-  - la combinación de talla y color;
-  - que la cantidad sea un entero dentro del límite.
-
-  Los precios y totales siempre salen del catálogo.
-- **Sin duplicados:** una misma acción repetida dentro del mismo mensaje del cliente se rechaza, y "Reintentar" no repite acciones ya hechas.
-- **Eliminar varios artículos:** la tienda muestra un botón de confirmación y no elimina nada hasta que el cliente lo pulsa.
-- **Finalizar el pedido:** el chat muestra el resumen y el botón "Continuar por WhatsApp". El botón abre el formulario de pedido de siempre, así que nombre y dirección se capturan en el navegador y no se envían a la IA. WhatsApp solo se abre cuando el cliente lo pulsa.
-- **Privacidad:** la conversación se guarda solo en esta pestaña (`sessionStorage`) y se borra con "Nueva conversación". El servidor no registra conversaciones; solo tipos de error.
-
-### Configurar el proveedor
-
-1. Crea una clave en [console.anthropic.com](https://console.anthropic.com).
-2. Copia `.env.example` como `.env` y completa la clave:
-
-   ```bash
-   ANTHROPIC_API_KEY=tu-clave
-   ```
-
-   No uses el prefijo `VITE_`: las variables con ese prefijo se incluyen en el código del navegador.
-3. Reinicia `npm run dev`. Sin clave, el chat muestra "El asistente aún no está configurado" y ofrece WhatsApp.
-
-Opciones en `.env.example`:
-
-| Variable | Valor por defecto | Para qué sirve |
-| --- | --- | --- |
-| `AI_MODEL` | `claude-opus-5-5` | Modelo. `claude-haiku-5-5` es mucho más económico. |
-| `AI_EFFORT` | `low` | Esfuerzo de razonamiento. |
-| `AI_FALLBACKS` | `default` | Reintenta en otro modelo si el principal declina por políticas de seguridad. Usa `off` con Haiku, que no tiene ese reintento. |
-| `CHAT_RATE_LIMIT_PER_MINUTE` / `CHAT_RATE_LIMIT_PER_DAY` | `15` / `300` | Límites de uso por IP. |
-| `CHAT_MAX_*` | ver archivo | Límites de tamaño y de acciones por mensaje. |
-| `CHAT_ALLOWED_ORIGINS` | vacío (mismo dominio) | Dominios autorizados para llamar al endpoint. |
-
-La configuración del servidor está en `server/config.ts` y las reglas del asistente en `server/prompt.ts`.
-
-### Desarrollo
-
-`npm run dev` y `npm run preview` montan el endpoint `/api/chat` en el mismo servidor de Vite, así que no hace falta otro proceso. Las pruebas usan un proveedor simulado y no gastan créditos.
-
-### Despliegue
-
-**Vercel (recomendado):** el proyecto ya incluye `api/chat.ts` (función serverless) y `vercel.json` (rutas de la tienda).
-
-1. Importa el repositorio en Vercel (detecta Vite).
-2. En *Settings → Environment Variables* agrega `ANTHROPIC_API_KEY` y, si quieres, las opciones de arriba.
-3. Despliega. La tienda y `/api/chat` quedan en el mismo dominio.
-
-**Otros hosting:** `server/chatHandler.ts` es un manejador estándar de Node (`req`, `res`). Se puede montar en cualquier servidor Node (Express, Fastify) o adaptarlo a funciones de otra plataforma. Si publicas solo la carpeta `dist/` en un hosting estático sin funciones, la tienda funciona y el chat muestra que el asistente no está disponible.
-
-**Límite de uso:** el límite incluido vive en la memoria de cada instancia. Con tráfico real, súmale el de la plataforma (por ejemplo, Vercel Firewall) y define un límite de gasto en la consola del proveedor.
+Textos y temas: `src/chat/assistant.ts` (`TOPICS` y `MENU`). Ventana: `src/components/chat/ChatWidget.tsx`.
 
 ## Estructura
 
 ```
 src/
   config/      configuración de la tienda y navegación
-  data/        productos, categorías, páginas de información y guía de tallas
-  lib/         lógica sin interfaz: carrito, filtros, mensaje de WhatsApp, formato
-  chat/        asistente: herramientas, controlador restringido, protocolo y estado de la conversación
+  data/        productos de ejemplo, categorías, promociones, páginas de información y guía de tallas
+  lib/         lógica sin interfaz: carrito, filtros, promociones, pedido, formato
+  chat/        asistente de la tienda (sin IA)
   context/     estado del carrito (localStorage, carrito lateral, formulario de pedido)
-  components/  componentes reutilizables (Dialog accesible, tarjetas, selectores…)
-  pages/       inicio, catálogo, producto, carrito, información y 404
+  components/  componentes reutilizables (Dialog accesible, tarjetas, guía de tallas…)
+  pages/       inicio, catálogo, producto, promociones, carrito, información y 404
   test/        pruebas con Vitest y Testing Library
-server/        endpoint del asistente (solo servidor): configuración, reglas, validación, proveedor
-api/chat.ts    función serverless para Vercel
+server/        solo servidor: catálogo desde Supabase y registro de pedidos
+api/pedidos.ts función serverless para Vercel
+supabase/      migraciones SQL (tablas de pedidos)
 ```
+
+## Pedidos en Supabase (dev / prd)
+
+La tienda registra cada pedido confirmado en `pedidos_carrito` (encabezado) y `pedidos_carrito_detalles` (artículos) mediante el endpoint `/api/pedidos`, que corre en el servidor con la Secret key.
+
+**Crear las tablas en un ambiente nuevo** (una sola vez; se puede repetir sin problema):
+
+1. Abre el proyecto de Supabase del ambiente (dev o prd) → **SQL Editor**.
+2. Pega y ejecuta [`supabase/migrations/20261124000000_pedidos_carrito.sql`](supabase/migrations/20261124000000_pedidos_carrito.sql).
+   Con Supabase CLI: `supabase link --project-ref <ref>` y luego `supabase db push`.
+3. En **Authentication → Users** crea (o elige) el usuario al que se asignan los pedidos web y copia su UID.
+
+**Variables de cada ambiente** (en `.env` local o en el hosting):
+
+| Variable | Valor |
+| --- | --- |
+| `VITE_SUPABASE_URL` | URL del proyecto del ambiente |
+| `VITE_SUPABASE_ANON_KEY` | Clave publishable del ambiente |
+| `SUPABASE_SECRET_KEY` | Secret key del ambiente (nunca con prefijo `VITE_`) |
+| `ORDER_USUARIO_ID` | UID del paso 3 |
+
+Requisitos: el proyecto debe tener la tabla `variantes` del catálogo. Guardar pedidos necesita servidor: funciona con `npm run dev`/`npm run preview` y en Vercel, pero no en GitHub Pages.
+
+**Consultar los pedidos** desde tu sistema: al final de la migración hay una consulta de ejemplo con cada pedido y sus artículos. El campo `estado` empieza en `pendiente` y lo actualiza tu sistema.

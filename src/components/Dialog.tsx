@@ -28,8 +28,14 @@ const panelStyles: Record<Variant, string> = {
   center:
     'relative m-auto flex max-h-[min(92dvh,52rem)] w-[calc(100%-2rem)] flex-col rounded-3xl bg-surface shadow-2xl motion-safe:animate-scale-in',
   right:
-    'ml-auto flex h-full w-full max-w-md flex-col bg-surface shadow-2xl motion-safe:animate-slide-in-right sm:rounded-l-3xl',
+    'ml-auto flex h-full w-full flex-col bg-surface shadow-2xl motion-safe:animate-slide-in-right sm:rounded-l-lg',
   left: 'mr-auto flex h-full w-[88%] max-w-sm flex-col bg-surface shadow-2xl motion-safe:animate-slide-in-left',
+};
+
+const widths: Record<Variant, Record<'md' | 'lg', string>> = {
+  center: { md: 'max-w-lg', lg: 'max-w-2xl' },
+  right: { md: 'max-w-md', lg: 'max-w-lg' },
+  left: { md: '', lg: '' },
 };
 
 export function Dialog({ open, onClose, title, children, variant = 'center', footer, initialFocusRef, size = 'md' }: DialogProps) {
@@ -116,7 +122,7 @@ export function Dialog({ open, onClose, title, children, variant = 'center', foo
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`${panelStyles[variant]} ${variant === 'center' ? (size === 'lg' ? 'max-w-2xl' : 'max-w-lg') : ''} relative z-10 focus:outline-none`}
+        className={`${panelStyles[variant]} ${widths[variant][size]} relative z-10 focus:outline-none`}
       >
         <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
           <h2 id={titleId} className="text-lg font-bold tracking-tight">

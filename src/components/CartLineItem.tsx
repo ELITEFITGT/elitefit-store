@@ -4,6 +4,7 @@ import { storeConfig } from '../config/store';
 import { useCart } from '../context/CartContext';
 import type { DetailedLine } from '../lib/cart';
 import { formatPrice } from '../lib/format';
+import { Price } from './Price';
 import { Img } from './Img';
 import { QuantitySelector } from './QuantitySelector';
 
@@ -18,7 +19,7 @@ export function CartLineItem({ line, compact = false, highlight = false, onNavig
   const { setQuantity, removeItem } = useCart();
   const { product } = line;
   const color = product.colors.find((c) => c.name === line.color);
-  const image = product.images[0];
+  const image = product.images.find((img) => img.color === line.color) ?? product.images[0];
 
   return (
     <li
@@ -58,9 +59,22 @@ export function CartLineItem({ line, compact = false, highlight = false, onNavig
                 </dd>
               </div>
             </dl>
-            <p className="mt-1 text-sm text-muted tabular-nums">{formatPrice(line.unitPrice)} c/u</p>
+            <p className="mt-1 text-sm text-muted">
+              <span className="tabular-nums">{formatPrice(line.originalUnitPrice)}</span> c/u
+            </p>
+            {line.promotion && (
+              <p className="mt-1 text-xs font-semibold text-accent-strong">
+                {line.promotion.title} · <span className="tabular-nums">-{formatPrice(line.discount)}</span>
+              </p>
+            )}
           </div>
-          <p className="shrink-0 font-bold tabular-nums">{formatPrice(line.subtotal)}</p>
+          <p className="shrink-0 text-right">
+            <Price
+              price={line.subtotal}
+              originalPrice={line.discount > 0 ? line.subtotal + line.discount : undefined}
+              className="flex-col items-end gap-x-0"
+            />
+          </p>
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3 pt-3">

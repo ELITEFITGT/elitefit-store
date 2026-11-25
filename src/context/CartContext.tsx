@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import type { ReactNode } from 'react';
 import { storeConfig } from '../config/store';
 import { products } from '../data/products';
-import { CART_STORAGE_KEY, cartReducer, cartTotals, detailLines, lineKey, loadCart, saveCart } from '../lib/cart';
+import { CART_STORAGE_KEY, cartPromotionHints, cartReducer, cartTotals, detailLines, lineKey, loadCart, saveCart } from '../lib/cart';
+import type { PromotionHint } from '../lib/promotions';
 import type { CartAction, DetailedLine } from '../lib/cart';
 import type { CartLine } from '../types';
 
@@ -16,8 +17,15 @@ interface CartContextValue {
   lines: DetailedLine[];
   units: number;
   total: number;
-  /** Agrega un artículo. Devuelve true si la cantidad se limitó al máximo permitido. */
-  addItem: (line: CartLine) => boolean;
+  /** Ahorro total por promociones. */
+  savings: number;
+  /** Promociones por cantidad a las que les falta poco (p. ej. agregar 1 par más). */
+  promotionHints: PromotionHint[];
+  /**
+   * Agrega un artículo. Devuelve true si la cantidad se limitó al máximo permitido.
+   * Por defecto abre el carrito; con `openDrawer: false` lo abre quien llama (p. ej. tras una animación).
+   */
+  addItem: (line: CartLine, options?: { openDrawer?: boolean }) => boolean;
   setQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
   clear: () => void;
@@ -67,16 +75,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [apply]);
 
   const lines = useMemo(() => detailLines(rawLines, products), [rawLines]);
-  const { units, total } = useMemo(() => cartTotals(lines), [lines]);
+  const { units, total, savings } = useMemo(() => cartTotals(lines), [lines]);
+  const promotionHints = useMemo(() => cartPromotionHints(lines), [lines]);
 
   const addItem = useCallback(
-    (line: CartLine) => {
+    (line: CartLine, options?: { openDrawer?: boolean }) => {
       const key = lineKey(line);
       const current = linesRef.current.find((l) => lineKey(l) === key)?.quantity ?? 0;
       apply({ type: 'add', line, max: MAX });
       setLastAddedKey(key);
       setCheckoutOpen(false);
-      setDrawerOpen(true);
+      if (options?.openDrawer !== false) setDrawerOpen(true);
       return current + line.quantity > MAX;
     },
     [apply],
@@ -87,6 +96,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lines,
       units,
       total,
+      savings,
+      promotionHints,
       addItem,
       setQuantity: (key, quantity) => apply({ type: 'setQuantity', key, quantity, max: MAX }),
       removeItem: (key) => apply({ type: 'remove', key }),
@@ -106,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       closeCheckout: () => setCheckoutOpen(false),
       port,
     }),
-    [lines, units, total, addItem, apply, lastAddedKey, drawerOpen, checkoutOpen, port],
+    [lines, units, total, savings, promotionHints, addItem, apply, lastAddedKey, drawerOpen, checkoutOpen, port],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

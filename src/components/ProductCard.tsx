@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { categoryName } from '../data/products';
-import { formatPrice } from '../lib/format';
+import { priceWithPromotion } from '../lib/promotions';
 import type { Product } from '../types';
 import { Img } from './Img';
+import { BundleOffer, Price, PromoBadge } from './Price';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, priority = false }: ProductCardProps) {
   const [main, alt] = product.images;
+  const pricing = priceWithPromotion(product, product.price);
   return (
     <article className="group relative flex flex-col">
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-line/40">
@@ -34,11 +36,12 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             className="absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100 md:block"
           />
         )}
-        {product.isNew && (
-          <span className="absolute left-3 top-3 rounded-full bg-canvas px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em]">
-            Nuevo
-          </span>
-        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          <PromoBadge promotion={pricing.promotion} />
+          {product.isNew && (
+            <span className="rounded-full bg-canvas px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em]">Nuevo</span>
+          )}
+        </div>
         <span
           className="absolute bottom-3 right-3 hidden h-10 w-10 items-center justify-center rounded-full bg-canvas text-ink opacity-0 shadow-sm transition duration-300 group-hover:opacity-100 md:inline-flex motion-safe:translate-y-1 motion-safe:group-hover:translate-y-0"
           aria-hidden="true"
@@ -58,7 +61,9 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           </Link>
         </h3>
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <p className="font-bold tabular-nums">{formatPrice(product.price)}</p>
+          <p>
+            <Price price={pricing.price} originalPrice={pricing.originalPrice} className="text-sm sm:text-base" />
+          </p>
           <ul className="flex items-center -space-x-1" aria-label="Colores disponibles">
             {product.colors.slice(0, 4).map((c) => (
               <li key={c.name} className="h-3.5 w-3.5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.18)] ring-2 ring-canvas" style={{ backgroundColor: c.hex }}>
@@ -67,6 +72,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
             ))}
           </ul>
         </div>
+        <BundleOffer promotion={pricing.promotion} price={pricing.price} className="text-xs sm:text-[13px]" />
       </div>
     </article>
   );

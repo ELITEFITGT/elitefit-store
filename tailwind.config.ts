@@ -12,6 +12,7 @@ export default {
         canvas: withAlpha('canvas'),
         surface: withAlpha('surface'),
         ink: withAlpha('ink'),
+        night: withAlpha('night'),
         muted: withAlpha('muted'),
         line: withAlpha('line'),
         accent: withAlpha('accent'),
